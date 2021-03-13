@@ -68,9 +68,9 @@ def graph_surface(function, rect, offset=0.5, width=256, height=256):
 
     # draw the surface and the offset
     plt.pcolormesh(xx0, xx1, values,
-                   vmin=delta - maxval, vmax=delta + maxval)
+                   vmin=delta - maxval, vmax=delta + maxval, shading="auto")
 
-    if offset != None:
+    if offset is not None:
         plt.contour(xx0, xx1, values, colors='black', levels=[offset])
 
 
