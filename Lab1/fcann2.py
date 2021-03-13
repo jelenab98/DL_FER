@@ -47,10 +47,10 @@ def fcann2_train(X, Y_, hidden_neurons=5, param_niter=1000, param_delta=0.01, pa
         # updating the weights
 
         w_1 -= param_delta * grads_w_1 + param_lambda * np.linalg.norm(w_1)
-        b_1 -= param_delta * grads_b_1 + param_lambda * np.linalg.norm(b_1)
+        b_1 -= param_delta * grads_b_1
 
         w_2 -= param_delta * grads_w_2 + param_lambda * np.linalg.norm(w_2)
-        b_2 -= param_delta * grads_b_2 + param_lambda * np.linalg.norm(b_2)
+        b_2 -= param_delta * grads_b_2
 
     return w_1, b_1, w_2, b_2
 
