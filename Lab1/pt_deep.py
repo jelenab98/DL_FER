@@ -4,6 +4,9 @@ import numpy as np
 import data
 import matplotlib.pyplot as plt
 
+# TODO jupyter kod za testiranje
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class PTDeep(nn.Module):
     def __init__(self, neurons, activation):
@@ -35,6 +38,11 @@ class PTDeep(nn.Module):
             norm += torch.norm(weights)
         return norm
 
+    def count_params(self):
+        tensor_shapes = [(p[0], p[1][0].shape) for p in self.named_parameters()]
+        total_parameters = np.sum([p.numel() for p in self.parameters()])
+        return tensor_shapes, total_parameters
+
 
 def decfun(model, X):
     def classify(X):
@@ -42,7 +50,7 @@ def decfun(model, X):
     return classify
 
 
-def train(model, X, Yoh_, param_niter=100, param_delta=0.1, param_lambda=1e-4):
+def train(model, X, Yoh_, param_niter=100, param_delta=0.1, param_lambda=1e-4, print_step=100):
     """Arguments:
        - X: model inputs [NxD], type: torch.Tensor
        - Yoh_: ground truth [NxC], type: torch.Tensor
@@ -58,8 +66,8 @@ def train(model, X, Yoh_, param_niter=100, param_delta=0.1, param_lambda=1e-4):
 
         optimizer.step()
         optimizer.zero_grad()
-
-        print("Epoch {}/{}, loss = {}".format(epoch, param_niter, loss))
+        if epoch % print_step == 0:
+            print("Epoch {}/{}, loss = {}".format(epoch, param_niter, loss))
 
 
 def eval(model, X):
@@ -68,7 +76,7 @@ def eval(model, X):
        - X: actual datapoints [NxD], type: np.array
        Returns: predicted class probabilites [NxC], type: np.array
     """
-    X = torch.Tensor(X)
+    X = torch.Tensor(X).to(device)
     return model.forward(X).detach().cpu().numpy()
 
 

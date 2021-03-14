@@ -4,6 +4,8 @@ import numpy as np
 import pt_deep
 
 
+# TODO popraviti skidanje mnista, napisati jupyter kod za testiranje
+
 def load_mnist(dataset_root="./data/"):
     mnist_train = torchvision.datasets.MNIST(dataset_root, train=True, download=True)
     mnist_test = torchvision.datasets.MNIST(dataset_root, train=False, download=True)
@@ -13,6 +15,10 @@ def load_mnist(dataset_root="./data/"):
     x_train, x_test = x_train.float().div_(255.0), x_test.float().div_(255.0)
 
     return x_train, y_train, x_test, y_test
+
+def train_mb(model, x_train, y_train, x_test, y_test, lr, regul, print_step):
+    return
+
 
 if __name__ == "__main__":
     # inicijaliziraj generatore slučajnih brojeva

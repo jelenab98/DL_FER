@@ -204,6 +204,13 @@ def sample_gmm_2d(ncomponents, nclasses, nsamples):
     return X, Y_
 
 
+def sample_lr_data(n, b, std):
+    x = np.random.random(n)
+    e = np.random.randn(n) * std
+    y = x * b + e
+    return x, y
+
+
 def myDummyDecision(X):
     scores = X[:, 0] + X[:, 1] - 5
     return scores

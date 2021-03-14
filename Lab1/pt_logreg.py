@@ -4,6 +4,8 @@ import numpy as np
 import data
 import matplotlib.pyplot as plt
 
+# TODO jupyter kod sa zadacima
+
 
 class PTLogreg(nn.Module):
     def __init__(self, D, C):
@@ -26,7 +28,7 @@ def decfun(model, X):
     return classify
 
 
-def train(model, X, Yoh_, param_niter=100, param_delta=0.1, param_lambda=0):
+def train(model, X, Yoh_, param_niter=100, param_delta=0.1, param_lambda=1e-3, print_step=50):
     """Arguments:
        - X: model inputs [NxD], type: torch.Tensor
        - Yoh_: ground truth [NxC], type: torch.Tensor
@@ -42,8 +44,8 @@ def train(model, X, Yoh_, param_niter=100, param_delta=0.1, param_lambda=0):
 
         optimizer.step()
         optimizer.zero_grad()
-
-        print("Epoch {}/{}, loss = {}".format(epoch, param_niter, loss))
+        if epoch % print_step == 0:
+            print("Epoch {}/{}, loss = {}".format(epoch, param_niter, loss))
 
 
 def eval(model, X):
