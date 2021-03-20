@@ -1,10 +1,5 @@
-import torch
-import torch.nn as nn
 import torch.optim as optim
-import data
-import matplotlib.pyplot as plt
-import numpy as np
-# TODO testirati i jupyter kod sa zadacima
+import torch
 
 
 def MSE(y_gt, y_predicted):
@@ -30,7 +25,7 @@ def linear_regression(X, Y_, param_niter=100, param_delta=0.1):
         # update of gradients
         optimizer.step()
 
-        if i % 10 == 0:
+        if i % 100 == 0:
             print(f'\nstep: {i}, loss:{loss}, a:{a}, b {b}')
             diff = Y - Y_
             my_grad_a = 2 * torch.mean(diff * X)
@@ -42,18 +37,3 @@ def linear_regression(X, Y_, param_niter=100, param_delta=0.1):
         optimizer.zero_grad()
 
     return a, b
-
-
-if __name__ == '__main__':
-    np.random.seed(100)
-    x, y = data.sample_lr_data(100, 15, 2)
-    plt.scatter(x, y)
-    plt.show()
-    X = torch.Tensor(x)
-    Y_ = torch.Tensor(y)
-    a, b = linear_regression(X, Y_, 1000, 0.1)
-    y2 = X*a + b
-    y2 = y2.detach().numpy()
-    plt.scatter(x, y)
-    plt.scatter(x, y2)
-    plt.show()
