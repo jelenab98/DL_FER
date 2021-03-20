@@ -23,15 +23,6 @@ def load_mnist(dataset_root="./data/"):
     return x_train, y_train, x_test, y_test
 
 
-def show_first_16_images(x, y):
-    fig = plt.figure(figsize=(16, 16))
-    for i in range(1, 17):
-        plt.subplot(4, 4, i)
-        plt.imshow(x[i - 1])
-        plt.title(y[i - 1].detach().numpy())
-    plt.show()
-
-
 def show_weights(weights):
     fig = plt.figure(figsize=(16, 8))
     for i in range(10):
@@ -53,49 +44,50 @@ def show_loss(losses, labels):
 
 def train_weights_regularization(x_train, y_oh_train):
     arh = [784, 10]
-    lambdas = [0, 1e-3, 0.1, 1]
+    lambdas = [0, 1e-3, 0.1, 0.9]
     x_train = x_train.reshape(len(x_train), 784)
     for param_lambda in lambdas:
         print("Regularizacijski koeficijent je ", param_lambda)
-        model = pt_deep.PTDeep(arh, torch.relu).to(device)
-        pt_deep.train(model, x_train, y_oh_train, 5000, 0.1, param_lambda, 500, printing=False)
+        model = pt_deep.PTDeep(arh, torch.relu, cuda=True).to(device)
+        pt_deep.train(model, x_train, y_oh_train, 5000, 0.1, param_lambda, 500, printing=False, cuda=True)
         show_weights(model.weights[0])
 
 
-def train_test_regularization(x_train, y_train, y_oh_train, x_test, y_test, y_oh_test):
+def train_test_regularization(x_train, y_train, y_oh_train, x_test, y_test):
     x_train = x_train.reshape(len(x_train), 784)
     x_test = x_test.reshape(len(x_test), 784)
-    arh = [784, 100, 100, 10]
-    lambdas = [0, 1e-3, 0.1, 1]
+    arh = [784, 100, 10]
+    lambdas = [0, 1e-3, 0.1, 0.9]
     losses = []
     for param_lambda in lambdas:
         print("Model with architecture {} and lambda {}".format(arh, param_lambda))
-        model = pt_deep.PTDeep(arh, torch.relu).to(device)
-        losses.append(pt_deep.train(model, x_train, y_oh_train, 3001, 0.1, param_lambda, 1000))
+        model = pt_deep.PTDeep(arh, torch.relu, cuda=True).to(device)
+        losses.append(pt_deep.train(model, x_train, y_oh_train, 3001, 0.1, param_lambda, 1000, cuda=True))
 
-        probs = pt_deep.eval(model, x_train)
+        probs = pt_deep.eval(model, x_train, cuda=True)
         Y = np.argmax(probs, axis=1)
         accuracy, precision, M = data.eval_perf_multi(Y, y_train)
-        print("Train| Accuracy: {}, precision_recall: {}".format(accuracy, precision))
+        print("\nTrain| Accuracy: {}, precision_recall: {}".format(accuracy, precision))
 
-        probs = pt_deep.eval(model, x_test)
+        probs = pt_deep.eval(model, x_test, cuda=True)
         Y = np.argmax(probs, axis=1)
         accuracy, precision, M = data.eval_perf_multi(Y, y_test)
-        print("Test| Accuracy: {}, precision_recall: {}\n".format(accuracy, precision))
+        print("\nTest| Accuracy: {}, precision_recall: {}\n".format(accuracy, precision))
     return losses, lambdas
 
 
 def train_early_stopping(x_train, y_oh_train, x_valid, y_valid, param_delta,
                          param_niter, param_lambda, print_step, save_path):
-    x_train = x_train.reshape(len(x_train), 784)
-    x_valid = x_valid.reshape(len(x_valid), 784)
-    arh = [784, 100, 100, 10]
-    model = pt_deep.PTDeep(arh, torch.relu).to(device)
+
+    arh = [784, 100, 10]
+    model = pt_deep.PTDeep(arh, torch.relu, cuda=True).to(device)
     optimizer = torch.optim.SGD(params=model.parameters(), lr=param_delta)
     losses = []
     valid_acc = 0
     best_epoch = -1
     best_model = None
+    x_train = x_train.to(device)
+    y_oh_train = y_oh_train.to(device)
     for epoch in range(param_niter):
         probits = model.forward(x_train)
 
@@ -119,6 +111,44 @@ def train_early_stopping(x_train, y_oh_train, x_valid, y_valid, param_delta,
     return losses, best_epoch, best_model
 
 
+def train_test_early_stopping(x_train, y_oh_train, y_train, x_train_smaller, y_oh_smaller, x_valid, y_valid, x_test,
+                              y_oh_test, y_test, param_delta=0.1, param_niter=3001, param_lambda=1e-4, print_step=1000,
+                              save_path="./saved_model.pth"):
+
+    x_train = x_train.reshape(len(x_train), 784)
+    x_valid = x_valid.reshape(len(x_valid), 784)
+    x_train_smaller = x_train_smaller.reshape(len(x_train_smaller), 784)
+    x_test = x_test.reshape(len(x_test), 784)
+
+    losses, best_epoch, model = train_early_stopping(x_train_smaller, y_oh_smaller, x_valid, y_valid, param_delta,
+                                                     param_niter, param_lambda, print_step, save_path)
+
+    print("Best model is from epoch ", best_epoch)
+
+    optimizer = torch.optim.SGD(params=model.parameters(), lr=param_delta)
+
+    probits = model.forward(x_train.to(device))
+
+    loss = model.get_loss(probits, y_oh_train.to(device)) + param_lambda * model.get_norm()
+    loss.backward()
+
+    optimizer.step()
+
+    probits = model.forward(x_train.to(device))
+    loss = model.get_loss(probits, y_oh_train.to(device))
+    probs = pt_deep.eval(model, x_train)
+    Y = np.argmax(probs, axis=1)
+    accuracy, precision, M = data.eval_perf_multi(Y, y_train)
+    print("Train | Loss: {}, accuracy: {:.2f}%".format(loss, 100 * accuracy))
+
+    probits = model.forward(x_test.to(device))
+    loss = model.get_loss(probits, y_oh_test.to(device))
+    probs = pt_deep.eval(model, x_test)
+    Y = np.argmax(probs, axis=1)
+    accuracy, precision, M = data.eval_perf_multi(Y, y_test)
+    print("Test  | Loss: {}, accuracy: {:.2f}%".format(loss, 100 * accuracy))
+
+
 def evaluate_init_model(x_train, y_train, y_oh_train, x_test, y_test, y_oh_test):
     x_train = x_train.reshape(len(x_train), 784)
     x_test = x_test.reshape(len(x_test), 784)
@@ -140,20 +170,20 @@ def evaluate_init_model(x_train, y_train, y_oh_train, x_test, y_test, y_oh_test)
     print("Test  | Loss: {}, accuracy: {:.2f}%".format(loss, 100 * accuracy))
 
 
-def train_adam(x_train, y_oh_train, param_delta=1e-4, param_niter=3000, param_lambda=1e-4, print_step=1000,
-               scheduler=False, param_betas=(0.9, 0.999), param_gamma=1-1e-4):
+def train_adam(x_train, y_oh_train, y_train, x_test, y_test, y_oh_test, param_delta=1e-4, param_niter=3000,
+               param_lambda=1e-4, print_step=1000, scheduler=False, param_gamma=1-1e-4):
     x_train = x_train.reshape(len(x_train), 784)
-    arh = [784, 100, 100, 10]
+    x_test = x_test.reshape(len(x_test), 784)
+    arh = [784, 100, 10]
     model = pt_deep.PTDeep(arh, torch.relu).to(device)
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=param_delta,
-                                 weight_decay=param_lambda, betas=param_betas)
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=param_delta)
     if scheduler:
         scheduler_lr = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=param_gamma)
     losses = []
     for epoch in range(param_niter):
-        probits = model.forward(x_train)
+        probits = model.forward(x_train.to(device))
 
-        loss = model.get_loss(probits, y_oh_train)
+        loss = model.get_loss(probits, y_oh_train.to(device)) + model.get_norm() * param_lambda
         loss.backward()
 
         optimizer.step()
@@ -163,6 +193,20 @@ def train_adam(x_train, y_oh_train, param_delta=1e-4, param_niter=3000, param_la
         losses.append(loss)
         if scheduler:
             scheduler_lr.step()
+
+    probits = model.forward(x_train.to(device))
+    loss = model.get_loss(probits, y_oh_train.to(device))
+    probs = pt_deep.eval(model, x_train)
+    Y = np.argmax(probs, axis=1)
+    accuracy, precision, M = data.eval_perf_multi(Y, y_train)
+    print("Train | Loss: {}, accuracy: {:.2f}%".format(loss, 100 * accuracy))
+
+    probits = model.forward(x_test.to(device))
+    loss = model.get_loss(probits, y_oh_test.to(device))
+    probs = pt_deep.eval(model, x_test)
+    Y = np.argmax(probs, axis=1)
+    accuracy, precision, M = data.eval_perf_multi(Y, y_test)
+    print("Test  | Loss: {}, accuracy: {:.2f}%".format(loss, 100 * accuracy))
 
     return losses
 
@@ -174,9 +218,9 @@ def train_multiple_architectures(x_train, y_train, y_oh_train, x_test, y_test):
     losses = []
     train_stats = []
     test_stats = []
-    param_niter = [3000, 3000, 3000, 5000]
+    param_niter = [3001, 3001, 3001, 5001]
     param_delta = [0.1, 0.1, 0.1, 0.05]
-    param_lambda = 1e-2
+    param_lambda = 1e-4
     print_step = 1000
     for arh, epochs, lr in zip(architectures, param_niter, param_delta):
         print("Starting with architecture: ", arh)
@@ -197,7 +241,7 @@ def train_multiple_architectures(x_train, y_train, y_oh_train, x_test, y_test):
     return architectures, losses, train_stats, test_stats
 
 
-def svm(x_train, y_train, x_test, y_test):
+def svm2(x_train, y_train, x_test, y_test):
     x_train, y_train = x_train.detach().cpu().numpy(), y_train.detach().cpu().numpy()
     x_test, y_test = x_test.detach().cpu().numpy(), y_test.detach().cpu().numpy()
     x_train = x_train.reshape(len(x_train), -1)
@@ -209,23 +253,58 @@ def svm(x_train, y_train, x_test, y_test):
 
     model = svm.SVC(kernel="rbf", decision_function_shape="ovo").fit(x_train, y_train)
     accuracy, precision, M = data.eval_perf_multi(model.predict(x_test), y_test)
-    print("Radial SVM | Accuracy: {}, precision_recall: {}".format(accuracy, precision))
+    print("\nRBF SVM | Accuracy: {}, precision_recall: {}".format(accuracy, precision))
 
 
-def train_mb(model, x_train, y_train, param_delta, param_lambda, print_step, param_niter):
+def train_mb(x_train, y_train, y_gt, x_test, y_oh_test, y_test, param_delta, param_lambda, print_step, param_niter):
     x_train = x_train.reshape(len(x_train), 784)
-    optimizer = torch.optim.SGD(params=model.parameters(), lr=param_delta, weight_decay=param_lambda)
+    x_test = x_test.reshape(len(x_test), 784)
     losses = []
-    for epoch in range(param_niter):
+    batch_sizes = (64, 256, 1000)
 
-        probits = model.forward(x_train)
+    for batch_size in batch_sizes:
+        model = pt_deep.PTDeep([784, 100, 10], torch.relu).to(device)
+        optimizer = torch.optim.SGD(params=model.parameters(), lr=param_delta)
+        tmp_losses = []
+        print("Starting with the batch size of ", batch_size)
+        for epoch in range(param_niter):
+            permuted_indices = torch.randperm(len(x_train))
+            x_train_permuted = x_train[permuted_indices]
+            y_train_permuted = y_train[permuted_indices]
 
-        loss = model.get_loss(probits, y_train)
-        loss.backward()
+            x_train_in_batches = [x_i for x_i in torch.split(x_train_permuted, batch_size)]
+            y_train_in_batches = [y_i for y_i in torch.split(y_train_permuted, batch_size)]
 
-        optimizer.step()
-        optimizer.zero_grad()
-        if epoch % print_step == 0:
-            print("Epoch {}/{}, loss = {}".format(epoch, param_niter, loss))
-        losses.append(loss)
-    return losses
+            loss_log = 0
+            for i, (x, y) in enumerate(zip(x_train_in_batches, y_train_in_batches)):
+                probits = model.forward(x.to(device))
+
+                loss = model.get_loss(probits, y.to(device)) + param_lambda * model.get_norm()
+                loss.backward()
+
+                optimizer.step()
+                optimizer.zero_grad()
+                loss_log += loss
+                if i % 100 == 0 and epoch % print_step == 0:
+                    print("Step {}, loss: {}".format(i, loss))
+            loss_log /= len(x_train_in_batches)
+            if epoch % print_step == 0:
+                print("Epoch {}/{}, loss = {}".format(epoch, param_niter, loss_log))
+            tmp_losses.append(loss_log)
+
+        probits = model.forward(x_train.to(device))
+        loss = model.get_loss(probits, y_train.to(device))
+        probs = pt_deep.eval(model, x_train)
+        Y = np.argmax(probs, axis=1)
+        accuracy, precision, M = data.eval_perf_multi(Y, y_gt)
+        print("Train | Loss: {}, accuracy: {:.2f}%".format(loss, 100 * accuracy))
+
+        probits = model.forward(x_test.to(device))
+        loss = model.get_loss(probits, y_oh_test.to(device))
+        probs = pt_deep.eval(model, x_test)
+        Y = np.argmax(probs, axis=1)
+        accuracy, precision, M = data.eval_perf_multi(Y, y_test)
+        print("Test  | Loss: {}, accuracy: {:.2f}%".format(loss, 100 * accuracy))
+
+        losses.append(tmp_losses)
+    return losses, batch_sizes

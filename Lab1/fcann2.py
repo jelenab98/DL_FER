@@ -40,11 +40,16 @@ def fcann2_train(X, Y_, hidden_neurons=5, param_niter=1000, param_delta=0.01, pa
             print("Epoch {}/{}, loss: {}".format(epoch, param_niter, loss))
 
         # calculation of gradients
-        grads_w_2 = (predicted_classes - Y_) * h1.T
-        grads_b_2 = predicted_classes - Y_
+        grads_w_2_tmp = probits
+        grads_w_2_tmp[range(N), Y_] -= 1    # predicted classes - y_gt
+        grads_w_2_tmp /= N
+        grads_b_2 = np.sum(grads_w_2_tmp, axis=0)
+        grads_w_2 = np.matmul(h1.T, grads_w_2_tmp)
 
-        grads_w_1 = np.matmul(X.T, np.dot(np.dot((predicted_classes - Y_), w_2), ))
-        grads_b_1 = 0
+        grads_w_1_tmp = np.matmul(grads_w_2_tmp, w_2.T)
+        grads_w_1_tmp[h1 <= 0.0] = 0.0
+        grads_w_1 = np.mean(np.matmul(X.T, grads_w_1_tmp), axis=0)
+        grads_b_1 = np.sum(grads_w_1_tmp, axis=0)
 
         # updating the weights
 

@@ -6,23 +6,28 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class PTDeep(nn.Module):
-    def __init__(self, neurons, activation):
+    def __init__(self, neurons, activation, cuda=True):
         super().__init__()
 
         weights, biases = [], []
         for idx in range(len(neurons) - 1):
-            weights.append(nn.Parameter(nn.init.xavier_normal_(torch.zeros((neurons[idx], neurons[idx + 1]),
-                                                                           dtype=torch.float).to(device)),
-                                        requires_grad=True))
-            biases.append(nn.Parameter(torch.zeros((1, neurons[idx + 1]), dtype=torch.float).to(device),
-                                       requires_grad=True, ))
+            if cuda:
+                weights.append(nn.Parameter(nn.init.xavier_normal_(torch.zeros((neurons[idx], neurons[idx + 1]),
+                                                                               dtype=torch.float).to(device)),
+                                            requires_grad=True))
+                biases.append(nn.Parameter(torch.zeros((1, neurons[idx + 1]), dtype=torch.float).to(device),
+                                           requires_grad=True, ))
+            else:
+                weights.append(nn.Parameter(nn.init.xavier_normal_(torch.zeros((neurons[idx], neurons[idx + 1]),
+                                                                               dtype=torch.float)), requires_grad=True))
+                biases.append(nn.Parameter(torch.zeros((1, neurons[idx + 1]), dtype=torch.float), requires_grad=True, ))
 
         self.weights = nn.ParameterList(weights)
         self.biases = nn.ParameterList(biases)
         self.activation = activation
 
     def forward(self, X):
-        s = X.to(device)
+        s = X
         for w, b in zip(self.weights[:-1], self.biases[:-1]):
             s = self.activation(s.mm(w) + b)
         return torch.softmax(s.mm(self.weights[-1]) + self.biases[-1], dim=1)
@@ -51,9 +56,11 @@ def decfun(model, X):
     return classify
 
 
-def train(model, X, Yoh_, param_niter=100, param_delta=0.1, param_lambda=1e-4, print_step=100, printing=True):
-    X = X.to(device)
-    Yoh_ = Yoh_.to(device)
+def train(model, X, Yoh_, param_niter=100, param_delta=0.1, param_lambda=1e-4, print_step=100, printing=True,
+          cuda=True):
+    if cuda:
+        X = X.to(device)
+        Yoh_ = Yoh_.to(device)
     optimizer = torch.optim.SGD(params=model.parameters(), lr=param_delta)
     losses = []
 
@@ -74,6 +81,8 @@ def train(model, X, Yoh_, param_niter=100, param_delta=0.1, param_lambda=1e-4, p
     return losses
 
 
-def eval(model, X):
-    X = torch.Tensor(X).to(device)
+def eval(model, X, cuda=True):
+    X = torch.Tensor(X)
+    if cuda:
+        X = X.to(device)
     return model.forward(X).detach().cpu().numpy()
