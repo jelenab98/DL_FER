@@ -1,12 +1,12 @@
-import torch
-import torchvision
-import numpy as np
-import pt_deep
-import matplotlib.pyplot as plt
-import data
-
 from torchvision import datasets
 from sklearn import svm
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pt_deep
+import torch
+import data
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
