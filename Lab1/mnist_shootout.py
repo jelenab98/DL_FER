@@ -12,6 +12,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def load_mnist(dataset_root="./data/"):
+    """
+    Ucitavanje podataka.
+    :param dataset_root:
+    :return:
+    """
 
     mnist_train = datasets.MNIST(dataset_root, train=True, download=False)
     mnist_test = datasets.MNIST(dataset_root, train=False, download=False)
@@ -24,6 +29,11 @@ def load_mnist(dataset_root="./data/"):
 
 
 def show_weights(weights):
+    """
+    Pomocna funkcija za prikaz naucenih matrica tezina
+    :param weights:
+    :return:
+    """
     fig = plt.figure(figsize=(16, 8))
     for i in range(10):
         plt.subplot(2, 5, i + 1)
@@ -32,6 +42,12 @@ def show_weights(weights):
 
 
 def show_loss(losses, labels):
+    """
+    Pomocna funkcija za prikaz kretanja modela kroz epohe ucenja
+    :param losses:
+    :param labels:
+    :return:
+    """
     fig = plt.figure(figsize=(16, 10))
     for loss, label in zip(losses, labels):
         plt.plot(range(len(loss)), loss, label=label)
@@ -43,6 +59,13 @@ def show_loss(losses, labels):
 
 
 def train_weights_regularization(x_train, y_oh_train):
+    """
+    Utjecaj regularizacija na naucene tezine za pojedinu znamenku. S povecanjem regulariacije, matrice su zagladene,
+    odnosno preciznije su i bolje su definirani oblici pojedine znamenke koja se detektira.
+    :param x_train:
+    :param y_oh_train:
+    :return:
+    """
     arh = [784, 10]
     lambdas = [0, 1e-3, 0.1, 0.9]
     x_train = x_train.reshape(len(x_train), 784)
@@ -54,6 +77,16 @@ def train_weights_regularization(x_train, y_oh_train):
 
 
 def train_test_regularization(x_train, y_train, y_oh_train, x_test, y_test):
+    """
+    Utjecaj regularizacije na performanse modela. S povecanjem lambde se model pojednostavljuje i ne generalizira
+    tako dobro. Za manje vrijednosti se dobije blaga poboljsanja za razliku od lambda=0.
+    :param x_train:
+    :param y_train:
+    :param y_oh_train:
+    :param x_test:
+    :param y_test:
+    :return:
+    """
     x_train = x_train.reshape(len(x_train), 784)
     x_test = x_test.reshape(len(x_test), 784)
     arh = [784, 100, 10]
@@ -78,7 +111,20 @@ def train_test_regularization(x_train, y_train, y_oh_train, x_test, y_test):
 
 def train_early_stopping(x_train, y_oh_train, x_valid, y_valid, param_delta,
                          param_niter, param_lambda, print_step, save_path):
-
+    """
+    early stopping kako bi se sprječila pojava prenaučenosti i gubitka sposobnosti generalizacije. U pravilu se postiže
+    bolja performansa budući da je vraćen model koji nije počeo gubiti na generalizaciji.
+    :param x_train:
+    :param y_oh_train:
+    :param x_valid:
+    :param y_valid:
+    :param param_delta:
+    :param param_niter:
+    :param param_lambda:
+    :param print_step:
+    :param save_path:
+    :return:
+    """
     arh = [784, 100, 10]
     model = pt_deep.PTDeep(arh, torch.relu, cuda=True).to(device)
     optimizer = torch.optim.SGD(params=model.parameters(), lr=param_delta)
@@ -150,6 +196,17 @@ def train_test_early_stopping(x_train, y_oh_train, y_train, x_train_smaller, y_o
 
 
 def evaluate_init_model(x_train, y_train, y_oh_train, x_test, y_test, y_oh_test):
+    """
+    Evaluacija modela bez učenja. Točnost modela trebala bi biti 1/C % buduci da model za svaki primjer bira jednu od
+    C klasa koju ce dodijeliti.
+    :param x_train:
+    :param y_train:
+    :param y_oh_train:
+    :param x_test:
+    :param y_test:
+    :param y_oh_test:
+    :return:
+    """
     x_train = x_train.reshape(len(x_train), 784)
     x_test = x_test.reshape(len(x_test), 784)
 
@@ -172,6 +229,22 @@ def evaluate_init_model(x_train, y_train, y_oh_train, x_test, y_test, y_oh_test)
 
 def train_adam(x_train, y_oh_train, y_train, x_test, y_test, y_oh_test, param_delta=1e-4, param_niter=3000,
                param_lambda=1e-4, print_step=1000, scheduler=False, param_gamma=1-1e-4):
+    """
+    Trening s Adamom uz ili bez koristenja lr schedulera koji postepeno smanjuje stopu ucenja.
+    :param x_train:
+    :param y_oh_train:
+    :param y_train:
+    :param x_test:
+    :param y_test:
+    :param y_oh_test:
+    :param param_delta:
+    :param param_niter:
+    :param param_lambda:
+    :param print_step:
+    :param scheduler:
+    :param param_gamma:
+    :return:
+    """
     x_train = x_train.reshape(len(x_train), 784)
     x_test = x_test.reshape(len(x_test), 784)
     arh = [784, 100, 10]
@@ -212,6 +285,16 @@ def train_adam(x_train, y_oh_train, y_train, x_test, y_test, y_oh_test, param_de
 
 
 def train_multiple_architectures(x_train, y_train, y_oh_train, x_test, y_test):
+    """
+    Usporedba razlicitih modela i njihovih performansi. Dublji modeli su slozeniji, sporije se treniraju, ali daju
+    bolje rezultate.
+    :param x_train:
+    :param y_train:
+    :param y_oh_train:
+    :param x_test:
+    :param y_test:
+    :return:
+    """
     x_train = x_train.reshape(len(x_train), 784)
     x_test = x_test.reshape(len(x_test), 784)
     architectures = ([784, 10], [784, 100, 10], [784, 100, 100, 10], [784, 100, 100, 100, 10])
@@ -242,6 +325,15 @@ def train_multiple_architectures(x_train, y_train, y_oh_train, x_test, y_test):
 
 
 def svm2(x_train, y_train, x_test, y_test):
+    """
+    Usporedba SVM-a s dubokim modelima. Ocekujemo da RBF daje bolje rezultate. Problem s SVM-om je da treniranje
+    može potrajati dosta dugo.
+    :param x_train:
+    :param y_train:
+    :param x_test:
+    :param y_test:
+    :return:
+    """
     x_train, y_train = x_train.detach().cpu().numpy(), y_train.detach().cpu().numpy()
     x_test, y_test = x_test.detach().cpu().numpy(), y_test.detach().cpu().numpy()
     x_train = x_train.reshape(len(x_train), -1)
@@ -257,6 +349,22 @@ def svm2(x_train, y_train, x_test, y_test):
 
 
 def train_mb(x_train, y_train, y_gt, x_test, y_oh_test, y_test, param_delta, param_lambda, print_step, param_niter):
+    """
+    SGD train loop, odnosno ucenje po mini grupama. Ne uci se na potpunom gradijentu nego na djelomicno izracunatom.
+    Model bolje uci na taj nacin. Potrebno je manje epoha za postici bolje performanse, a mijenja se i raspon stope
+    učenja. Iako, vrtilo se dosta sporije nego prije što se tiče jedne epohe.
+    :param x_train:
+    :param y_train:
+    :param y_gt:
+    :param x_test:
+    :param y_oh_test:
+    :param y_test:
+    :param param_delta:
+    :param param_lambda:
+    :param print_step:
+    :param param_niter:
+    :return:
+    """
     x_train = x_train.reshape(len(x_train), 784)
     x_test = x_test.reshape(len(x_test), 784)
     losses = []

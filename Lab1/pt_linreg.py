@@ -3,6 +3,12 @@ import torch
 
 
 def MSE(y_gt, y_predicted):
+    """
+    Srednja kvadratna pogreška koja je neovisna o broju primjera.
+    :param y_gt:
+    :param y_predicted:
+    :return:
+    """
     return torch.mean((y_gt - y_predicted) ** 2)
 
 

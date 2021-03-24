@@ -7,14 +7,26 @@ class PTLogreg(nn.Module):
     def __init__(self, D, C):
         super().__init__()
 
+        # inicijalizacija parametara, w oko 0, b u 0
         self.w = nn.Parameter(torch.randn(D, C), requires_grad=True)
         self.b = nn.Parameter(torch.zeros(C), requires_grad=True)
 
     def forward(self, X):
+        """
+        Unaprijedni prolaz koji definiramo kao S(W*X +b)
+        :param X:
+        :return:
+        """
         return torch.softmax(X.mm(self.w) + self.b, dim=1)
 
     @staticmethod
     def get_loss(X, Yoh_):
+        """
+        Unakrsna entropija koja se dobije po formuli -1/N * (suma (log (P(Yi|x))))
+        :param X:
+        :param Yoh_:
+        :return:
+        """
         return -torch.mean(torch.sum(Yoh_ * torch.log(X), dim=1))
 
 
