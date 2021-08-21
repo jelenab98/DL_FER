@@ -4,8 +4,8 @@ from pathlib import Path
 import numpy as np
 from torchvision.datasets import MNIST
 
-import nn
 import layers
+import nn
 
 DATA_DIR = Path(__file__).parent / 'datasets'
 SAVE_DIR = Path(__file__).parent / 'out_train'
@@ -14,13 +14,15 @@ config = {}
 config['max_epochs'] = 8
 config['batch_size'] = 50
 config['save_dir'] = SAVE_DIR
-config['lr_policy'] = {1:{'lr':1e-1}, 3:{'lr':1e-2}, 5:{'lr':1e-3}, 7:{'lr':1e-4}}
+config['lr_policy'] = {1: {'lr': 1e-1}, 3: {'lr': 1e-2}, 5: {'lr': 1e-3}, 7: {'lr': 1e-4}}
+
 
 def dense_to_one_hot(y, class_count):
     return np.eye(class_count)[y]
 
-#np.random.seed(100) 
-np.random.seed(int(time.time() * 1e6) % 2**31)
+
+# np.random.seed(100)
+np.random.seed(int(time.time() * 1e6) % 2 ** 31)
 
 ds_train, ds_test = MNIST(DATA_DIR, train=True, download=False), MNIST(DATA_DIR, train=False)
 train_x = ds_train.data.reshape([-1, 1, 28, 28]).numpy().astype(np.float) / 255
@@ -32,7 +34,6 @@ test_y = ds_test.targets.numpy()
 train_mean = train_x.mean()
 train_x, valid_x, test_x = (x - train_mean for x in (train_x, valid_x, test_x))
 train_y, valid_y, test_y = (dense_to_one_hot(y, 10) for y in (train_y, valid_y, test_y))
-
 
 net = []
 inputs = np.random.randn(config['batch_size'], 1, 28, 28)
