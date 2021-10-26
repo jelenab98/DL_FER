@@ -1,2 +1,6 @@
 # DL_FER
-Laboratorijske vježbe iz kolegija Duboko učenje na Fakultetu elektrotehnike i računarstva u ak.godini 2020./2021.
+Laboratory exercises from the course Deep Learning at Faculty of Electrical Engineering and Computing.
+Topics covered in exercises:
+  - Lab 1 - Fully Connected Neural Network and classification of MNIST dataset
+  - Lab 2 - Convolutional Neural Networks and classification of CIFAR10 dataset
+  - Lab 3 - Recurrent Neural Networks
